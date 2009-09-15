@@ -27,6 +27,7 @@ import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Environment;
+import android.os.FileUtils;
 import android.os.StatFs;
 import android.os.SystemClock;
 import android.provider.Downloads;
@@ -180,12 +181,20 @@ public class Helpers {
             if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
                 String root = Environment.getExternalStorageDirectory().getPath();
                 base = new File(root + Constants.DEFAULT_DL_SUBDIR);
-                if (!base.isDirectory() && !base.mkdir()) {
-                    if (Config.LOGD) {
-                        Log.d(Constants.TAG, "download aborted - can't create base directory "
-                                + base.getPath());
+                if (!base.isDirectory()) {
+                    if (base.mkdir()) {
+                        /*
+                         * Make sure the download directory is accessible
+                         */
+                        FileUtils.setPermissions(base.getPath(),
+                                FileUtils.S_IRWXU|FileUtils.S_IXGRP|FileUtils.S_IXOTH, -1, -1);
+                    } else {
+                        if (Config.LOGD) {
+                            Log.d(Constants.TAG, "download aborted - can't create base directory "
+                                    + base.getPath());
+                        }
+                        return new DownloadFileInfo(null, null, Downloads.STATUS_FILE_ERROR);
                     }
-                    return new DownloadFileInfo(null, null, Downloads.STATUS_FILE_ERROR);
                 }
                 stat = new StatFs(base.getPath());
             } else {
